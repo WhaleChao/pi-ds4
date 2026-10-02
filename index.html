@@ -2023,10 +2023,10 @@ ln -sfn gguf/…Abliterated-….gguf <span class="hi">ds4flash.gguf</span></code
 
     <dl class="vars">
       <div>
-        <dt>DS4_CONTEXT_KB<span class="default"><span lang="en-GB">default: 100</span><span lang="zh-TW">預設：100</span></span></dt>
+        <dt>DS4_CONTEXT_KB<span class="default"><span lang="en-GB">default: 256</span><span lang="zh-TW">預設：256</span></span></dt>
         <dd>
-          <p lang="en-GB">The context window in thousands of tokens — the only supported way to set it. <code>100</code> means 100 000 tokens, the conservative default. Common values: <code>128</code>, <code>256</code>, <code>512</code>, <code>1024</code> (the last selects the model’s full 1M context).</p>
-          <p lang="zh-TW">Context window 的大小，單位是千個 token；這是唯一支援的設定方式。<code>100</code> 代表 100 000 個 token，也就是保守的預設值。常用值：<code>128</code>、<code>256</code>、<code>512</code>、<code>1024</code>（最後一個開啟模型完整的 1M context）。</p>
+          <p lang="en-GB">The context window in thousands of tokens — the only supported way to set it. <code>256</code> means 256 000 tokens, the default that still hosts senpi/omo’s start budget. Common values: <code>100</code> (tight override; advertised <code>maxTokens</code> is capped so admission still fits), <code>128</code>, <code>256</code>, <code>512</code>, <code>1024</code> (the last selects the model’s full 1M context).</p>
+          <p lang="zh-TW">Context window 的大小，單位是千個 token；這是唯一支援的設定方式。<code>256</code> 代表 256 000 個 token，也是能裝下 senpi/omo 啟動預算的預設值。常用值：<code>100</code>（緊的覆寫；會壓低對外的 <code>maxTokens</code> 讓啟動檢查仍過）、<code>128</code>、<code>256</code>、<code>512</code>、<code>1024</code>（最後一個開啟模型完整的 1M context）。</p>
           <p lang="en-GB">A larger context normally wants a larger <code>DS4_KV_DISK_SPACE_MB</code> too — <code>65536</code> or more for 1M — so the on-disk cache can hold a whole working set (<a href="#tuning">Chapter 6</a>).</p>
           <p lang="zh-TW">Context 調大時，通常也要把 <code>DS4_KV_DISK_SPACE_MB</code> 調大（1M 至少 <code>65536</code>），磁碟上的快取才裝得下整個工作集（<a href="#tuning">第六章</a>）。</p>
         </dd>
@@ -2136,37 +2136,37 @@ ln -sfn gguf/…Abliterated-….gguf <span class="hi">ds4flash.gguf</span></code
 
     <h3 id="6.4"><span class="no">6.4</span><span lang="en-GB">Context, KV cache and disk</span><span lang="zh-TW">Context、KV cache 與磁碟</span></h3>
 
-    <p lang="en-GB">The server is launched from <code>DS4_CONTEXT_KB=100</code> and a memory-tiered <code>DS4_KV_DISK_SPACE_MB</code> (<code>65536</code> on 128 GB+), which is to say <code>--ctx 100000 --kv-disk-dir ~/.pi/ds4/kv --kv-disk-space-mb …</code>. In practice:</p>
-    <p lang="zh-TW">伺服器以 <code>DS4_CONTEXT_KB=100</code> 與依記憶體分級的 <code>DS4_KV_DISK_SPACE_MB</code>（128 GB 以上是 <code>65536</code>）啟動，也就是 <code>--ctx 100000 --kv-disk-dir ~/.pi/ds4/kv --kv-disk-space-mb …</code>。實際上的意思是：</p>
+    <p lang="en-GB">The server is launched from <code>DS4_CONTEXT_KB=256</code> and a memory-tiered <code>DS4_KV_DISK_SPACE_MB</code> (<code>65536</code> on 128 GB+), which is to say <code>--ctx 256000 --kv-disk-dir ~/.pi/ds4/kv --kv-disk-space-mb …</code>. In practice:</p>
+    <p lang="zh-TW">伺服器以 <code>DS4_CONTEXT_KB=256</code> 與依記憶體分級的 <code>DS4_KV_DISK_SPACE_MB</code>（128 GB 以上是 <code>65536</code>）啟動，也就是 <code>--ctx 256000 --kv-disk-dir ~/.pi/ds4/kv --kv-disk-space-mb …</code>。實際上的意思是：</p>
 
     <ul lang="en-GB">
-      <li>one conversation is capped at 100 000 tokens;</li>
+      <li>one conversation is capped at 256 000 tokens;</li>
       <li>the KV cache spills to <code>~/.pi/ds4/kv</code> when memory runs low;</li>
       <li>the on-disk cap follows your memory (about 64 GB on 128 GB+), sized so a long agent session can keep reusing its prefix checkpoints.</li>
     </ul>
     <ul lang="zh-TW">
-      <li>一場對話的上限是 100 000 個 token；</li>
+      <li>一場對話的上限是 256 000 個 token；</li>
       <li>記憶體不夠時，KV cache 溢到 <code>~/.pi/ds4/kv</code>；</li>
       <li>磁碟上限跟著記憶體走（128 GB 以上約 64 GB），大小足以讓長時間的 agent 對話持續重用前綴檢查點。</li>
     </ul>
 
     <div class="aside">
-      <span class="label"><span lang="en-GB">100k and 1M are different machines to live on</span><span lang="zh-TW">100k 與 1M 是兩種不一樣的日子</span></span>
-      <p lang="en-GB">ds4’s Metal context estimator puts the KV and context buffers at roughly 2.4 GiB for the 100k default; 250k is about 5.5 GiB, 300k about 6.5 GiB, and 1M jumps to about 20.8 GiB — before the 87 GB of weights and the transient inference buffers. Disk scales with it: a full checkpoint grows from about 1.4 GB at 100k to about 14 GB at 1M, so an 8 GB KV budget is not a 1M setting (128 GB+ installs default to 64 GB).</p>
-      <p lang="zh-TW">ds4 的 Metal context 估算器顯示，100k 預設約需 2.4 GiB 的 KV 與 context 緩衝；250k 約 5.5 GiB，300k 約 6.5 GiB，1M 則跳到約 20.8 GiB，這還沒算 87 GB 的權重與推論時的暫存。磁碟跟著漲：完整的檢查點從 100k 的約 1.4 GB 長到 1M 的約 14 GB，所以 8 GB 的 KV 預算不是 1M 的設定（128 GB 以上的安裝預設是 64 GB）。</p>
+      <span class="label"><span lang="en-GB">256k and 1M are different machines to live on</span><span lang="zh-TW">256k 與 1M 是兩種不一樣的日子</span></span>
+      <p lang="en-GB">ds4’s Metal context estimator puts the KV and context buffers at roughly 5.5 GiB for the 256k default (100k is about 2.4 GiB, 300k about 6.5 GiB); 1M jumps to about 20.8 GiB — before the 87 GB of weights and the transient inference buffers. Disk scales with it: a full checkpoint grows from about 1.4 GB at 100k to about 14 GB at 1M, so an 8 GB KV budget is not a 1M setting (128 GB+ installs default to 64 GB).</p>
+      <p lang="zh-TW">ds4 的 Metal context 估算器顯示，256k 預設約需 5.5 GiB 的 KV 與 context 緩衝（100k 約 2.4 GiB，300k 約 6.5 GiB）；1M 則跳到約 20.8 GiB，這還沒算 87 GB 的權重與推論時的暫存。磁碟跟著漲：完整的檢查點從 100k 的約 1.4 GB 長到 1M 的約 14 GB，所以 8 GB 的 KV 預算不是 1M 的設定（128 GB 以上的安裝預設是 64 GB）。</p>
     </div>
 
     <div class="aside">
       <span class="label"><span lang="en-GB">Inputs beyond 32k tokens are an experiment</span><span lang="zh-TW">超過 32k token 的輸入，請當實驗</span></span>
-      <p lang="en-GB"><code>--ctx 100000</code> is what the server will accept. But the cyberneurova model card states plainly that <em>the abliterated V4 Flash has not been validated above 32 000 tokens</em>. If you are about to put a whole book, codebase or report into one prompt — journalists, researchers and policy analysts especially — split it, cross-check it, and do not treat a single output above 32k as known-good.</p>
-      <p lang="zh-TW"><code>--ctx 100000</code> 是伺服器願意接受的長度。但 cyberneurova 的模型卡明白寫著：<em>abliterated 過的 V4 Flash 在 32 000 個 token 以上尚未驗證</em>。若你正要把整本書、整個程式庫、整份報告塞進單一提示，尤其是記者、研究者、政策分析師，請分段、交叉查證，別把超過 32k 的單次輸出當成已知可靠。</p>
+      <p lang="en-GB"><code>--ctx 256000</code> is what the server will accept by default. But the cyberneurova model card states plainly that <em>the abliterated V4 Flash has not been validated above 32 000 tokens</em>. If you are about to put a whole book, codebase or report into one prompt — journalists, researchers and policy analysts especially — split it, cross-check it, and do not treat a single output above 32k as known-good.</p>
+      <p lang="zh-TW"><code>--ctx 256000</code> 是伺服器預設願意接受的長度。但 cyberneurova 的模型卡明白寫著：<em>abliterated 過的 V4 Flash 在 32 000 個 token 以上尚未驗證</em>。若你正要把整本書、整個程式庫、整份報告塞進單一提示，尤其是記者、研究者、政策分析師，請分段、交叉查證，別把超過 32k 的單次輸出當成已知可靠。</p>
     </div>
 
     <p lang="en-GB">
-      For the model’s full 1M context, set <code>DS4_CONTEXT_KB=1024</code> and <code>DS4_KV_DISK_SPACE_MB=65536</code> or higher. Both defaults — <code>100</code> and the memory tier — are deliberately conservative.
+      For the model’s full 1M context, set <code>DS4_CONTEXT_KB=1024</code> and <code>DS4_KV_DISK_SPACE_MB=65536</code> or higher. Both defaults — <code>256</code> and the memory tier — are sized for 96 GB+ machines, not for squeezing every last token.
     </p>
     <p lang="zh-TW">
-      要用模型完整的 1M context，設定 <code>DS4_CONTEXT_KB=1024</code> 與 <code>DS4_KV_DISK_SPACE_MB=65536</code> 或更高。兩個預設，<code>100</code> 與記憶體分級，都是刻意保守的。
+      要用模型完整的 1M context，設定 <code>DS4_CONTEXT_KB=1024</code> 與 <code>DS4_KV_DISK_SPACE_MB=65536</code> 或更高。兩個預設，<code>256</code> 與記憶體分級，是依 96 GB 以上的機器來定的，不是為了榨盡每一個 token。
     </p>
   </section>
 
@@ -2457,8 +2457,8 @@ claude</pre>
           "api": <span class="s">"openai-responses"</span>,
           "reasoning": <span class="v">true</span>,
           "input": [<span class="s">"text"</span>],
-          "contextWindow": <span class="v">100000</span>,
-          "maxTokens": <span class="v">100000</span>
+          "contextWindow": <span class="v">256000</span>,
+          "maxTokens": <span class="v">65536</span>
         }]
       }
     }
@@ -2467,10 +2467,10 @@ claude</pre>
     </div>
 
     <p lang="en-GB">
-      <code>contextWindow</code> must not exceed ds4-server’s <code>--ctx</code> (100000 by default); otherwise OpenClaw will send an over-long prompt and the server will refuse it. Write the whole provider block at once. Setting it key by key with <code>openclaw config set …</code> tends to miss <code>models[]</code>, <code>agents.defaults.model.primary</code> or <code>api</code>, and the session quietly stays on the old provider.
+      <code>contextWindow</code> must not exceed ds4-server’s <code>--ctx</code> (256000 by default); otherwise OpenClaw will send an over-long prompt and the server will refuse it. Write the whole provider block at once. Setting it key by key with <code>openclaw config set …</code> tends to miss <code>models[]</code>, <code>agents.defaults.model.primary</code> or <code>api</code>, and the session quietly stays on the old provider.
     </p>
     <p lang="zh-TW">
-      <code>contextWindow</code> 不能超過 ds4-server 的 <code>--ctx</code>（預設 100000），否則 OpenClaw 會送出過長的提示，然後被伺服器拒絕。請一次把整段 provider 區塊寫好。用 <code>openclaw config set …</code> 逐個 key 設定，很容易漏掉 <code>models[]</code>、<code>agents.defaults.model.primary</code> 或 <code>api</code>，於是對話悄悄留在舊的 provider 上。
+      <code>contextWindow</code> 不能超過 ds4-server 的 <code>--ctx</code>（預設 256000），否則 OpenClaw 會送出過長的提示，然後被伺服器拒絕。請一次把整段 provider 區塊寫好。用 <code>openclaw config set …</code> 逐個 key 設定，很容易漏掉 <code>models[]</code>、<code>agents.defaults.model.primary</code> 或 <code>api</code>，於是對話悄悄留在舊的 provider 上。
     </p>
 
     <div class="aside">
@@ -2516,8 +2516,8 @@ claude</pre>
           "api": <span class="s">"openai-responses"</span>,
           "reasoning": <span class="v">true</span>,
           "input": [<span class="s">"text"</span>],
-          "contextWindow": <span class="v">100000</span>,
-          "maxTokens": <span class="v">100000</span>
+          "contextWindow": <span class="v">256000</span>,
+          "maxTokens": <span class="v">65536</span>
         }]
       }
     }
@@ -2727,13 +2727,13 @@ chmod +x download_model.sh
       <li><strong>Opening it to a LAN is your responsibility.</strong> ds4-server binds <code>127.0.0.1</code> and checks no key. For use across machines, put it behind Tailscale or a reverse proxy with authentication; do not flip <code>--host</code> to <code>0.0.0.0</code> and expose an unauthenticated model to the network.</li>
       <li><strong>The watchdog and leases work on Linux.</strong> <code>ds4-watchdog.sh</code> handles both BSD and GNU userlands — <code>stat -f %m</code> against <code>stat -c %Y</code>, <code>LC_ALL=C ps -o lstart</code> — so Chapter 7’s lifecycle covers a Spark directly. A hand-run <code>./ds4-server</code>, a systemd unit or a tmux session remain fine if you would rather skip the automation.</li>
       <li><strong>The backend is different.</strong> A Spark runs CUDA on GB10 tensor cores, not Metal. pi-ds4 supplies the same GGUF, steering arguments, context and KV defaults and lifecycle wrapper; backend behaviour follows ds4’s Linux build.</li>
-      <li><strong>Long context on a Spark is not covered here.</strong> pi-ds4 sends <code>--ctx 100000</code> on Mac and Linux alike, but KV-cache and long-context behaviour on the Spark is outside this letter’s testing. Under memory pressure, run <code>ds4-server</code> by hand and start from <code>--ctx 32768</code>.</li>
+      <li><strong>Long context on a Spark is not covered here.</strong> pi-ds4 sends <code>--ctx 256000</code> on Mac and Linux alike, but KV-cache and long-context behaviour on the Spark is outside this letter’s testing. Under memory pressure, run <code>ds4-server</code> by hand and start from <code>--ctx 32768</code>.</li>
     </ul>
     <ul lang="zh-TW">
       <li><strong>開放到區網是你自己的責任。</strong>ds4-server 綁在 <code>127.0.0.1</code>，不檢查任何金鑰。要跨機器使用，請放在 Tailscale 或帶驗證的 reverse proxy 後面；不要把 <code>--host</code> 改成 <code>0.0.0.0</code>，把一個沒有驗證的模型暴露在網路上。</li>
       <li><strong>看門狗與租約在 Linux 上也能跑。</strong><code>ds4-watchdog.sh</code> 同時處理 BSD 與 GNU 兩套工具（<code>stat -f %m</code> 對應 <code>stat -c %Y</code>、<code>LC_ALL=C ps -o lstart</code>），所以第七章的生命週期直接覆蓋 Spark。若你寧願跳過自動化，手動 <code>./ds4-server</code>、一個 systemd unit 或一個 tmux 視窗都仍然可行。</li>
       <li><strong>後端不一樣。</strong>Spark 跑的是 GB10 tensor core 上的 CUDA，不是 Metal。pi-ds4 提供的是同一份 GGUF、引導參數、context 與 KV 預設值，以及生命週期的包裝；後端行為跟著 ds4 的 Linux 建置走。</li>
-      <li><strong>Spark 上的長 context 這裡沒有涵蓋。</strong>pi-ds4 在 Mac 與 Linux 上都送 <code>--ctx 100000</code>，但 Spark 上的 KV cache 與長 context 行為不在這封信的測試範圍內。遇到記憶體壓力，手動跑 <code>ds4-server</code>，從 <code>--ctx 32768</code> 開始。</li>
+      <li><strong>Spark 上的長 context 這裡沒有涵蓋。</strong>pi-ds4 在 Mac 與 Linux 上都送 <code>--ctx 256000</code>，但 Spark 上的 KV cache 與長 context 行為不在這封信的測試範圍內。遇到記憶體壓力，手動跑 <code>ds4-server</code>，從 <code>--ctx 32768</code> 開始。</li>
     </ul>
 
     <p lang="en-GB">In other words this is not a strained “same GGUF, different runtime” compatibility. It is the same engine, the same startup shape and the same wrapper defaults across platforms — macOS and Linux share one <code>ds4-watchdog.sh</code>, <code>pi install</code> completes on a DGX Spark the way it does on a Mac, and running the server by hand stays open to you on both.</p>

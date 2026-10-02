@@ -97,9 +97,14 @@ const PROVIDER_BASE_URL = PROVIDER_API === "anthropic-messages" ? BASE_URL : API
 // DS4_CONTEXT_KB sets the server context window in *kilotokens* (the only
 // supported knob for context size).
 //
-//   Default: 100  → 100 000 tokens (the previous conservative default)
-//   Common values:
-//     128   → 128 k
+//   Default: 256  → 256 000 tokens.
+//   100 k cannot host senpi/omo's start budget: with maxTokens ≥ half the
+//   window, admission reserves output 50k + compaction 16k + speculation 8k
+//   + DeepSeek safety 12k + system/tools (~25k on a full omo prompt) = 112k
+//   (reproduced 2026-09-27: ModelUsabilityBudgetError, 12174 short of 112174).
+//   256 k was already the documented 96 GB+ recommendation; 1 M was measured
+//   on a 128 GB M5 Max. Common values:
+//     128   → 128 k  (tight: also cap advertised maxTokens)
 //     256   → 256 k
 //     512   → 512 k
 //     1024  → 1 024 000 tokens (full 1 M context of DeepSeek V4 Flash)
@@ -118,10 +123,18 @@ const PROVIDER_BASE_URL = PROVIDER_API === "anthropic-messages" ? BASE_URL : API
 // The 1 M path (DS4_CONTEXT_KB=1024 + 65536 MiB KV) was measured on a 128 GB M5 Max:
 // ≈ 21.3 GB live KV buffers, server reached "listening" successfully.
 // On 96 GB machines keep ≤ 256 unless other memory usage is minimal.
-const CONTEXT_KB = (process.env.DS4_CONTEXT_KB ?? "100").trim();
+const CONTEXT_KB = (process.env.DS4_CONTEXT_KB ?? "256").trim();
 const CTX_SIZE = /^\d+$/.test(CONTEXT_KB)
 	? String(Number(CONTEXT_KB) * 1000)
-	: "100000";
+	: "256000";
+
+/** Senpi/omo start-budget: min(maxTokens, floor(ctx/2)) plus ~62k of prompt/tools/reserves. */
+function advertisedMaxTokens(contextWindow: number): number {
+	const senpiFixedOverhead = 64_000;
+	const halfWindow = Math.floor(contextWindow * 0.5);
+	const room = contextWindow - senpiFixedOverhead;
+	return Math.max(16_384, Math.min(65_536, halfWindow, room));
+}
 
 function defaultKvDiskSpaceMb(): string {
 	const ramGb = totalmem() / 1_000_000_000;
@@ -2325,8 +2338,8 @@ function registerDs4Provider(pi: ExtensionAPI): void {
 					max: "max",
 				},
 				input: ["text", "image"],
-				contextWindow: Number(CTX_SIZE) || 100000,
-				maxTokens: 384000,
+				contextWindow: Number(CTX_SIZE) || 256000,
+				maxTokens: advertisedMaxTokens(Number(CTX_SIZE) || 256000),
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			},
 		],

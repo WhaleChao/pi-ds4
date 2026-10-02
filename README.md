@@ -32,7 +32,7 @@ pi install  https://github.com/audreyt/pi-ds4
 | Package version | **0.6.1** |
 | `SUPPORT_PIN` | `7855b7a` (`audreyt/ds4` main: Vision-Exp engine + `preferred` alias; `--vision` works) |
 | Preferred GGUF | Vision-Exp abliterated IQ2 from [`audreyt/DeepSeek-V4-Flash-Vision-Exp-Abliterated-GGUF`](https://huggingface.co/audreyt/DeepSeek-V4-Flash-Vision-Exp-Abliterated-GGUF) plus the unmodified encoder from [`antirez/deepseek-v4-gguf`](https://huggingface.co/antirez/deepseek-v4-gguf) — `preferred` alias now accepted (`q2`/`preferred`) |
-| Default context | 100 k tokens (`DS4_CONTEXT_KB=100`) |
+| Default context | 256 k tokens (`DS4_CONTEXT_KB=256`) |
 | Guide / OG card | **v0.6.1** Vision-Exp (~81 GiB IQ2 + encoder; 286/45 t/s is a 207-token `/read` smoke, not a 2k prefill bench) |
 
 `pi install https://github.com/audreyt/pi-ds4` installs exactly this tag.
@@ -239,7 +239,7 @@ from seeded requests on audreyt/ds4.
 * `DS4_SKIP_BUILD_SMOKE` — skip post-build generation smoke (dev only; default off)
 * `DS4_DOWNLOAD_SCRIPT` — absolute path to model download script
 * `DS4_REPRODUCIBLE` / `DS4_REPRODUCIBLE_SEED` — seed injection (default on / `42`)
-* `DS4_CONTEXT_KB` — context kilotokens (default `100`)
+* `DS4_CONTEXT_KB` — context kilotokens (default `256`; `100` is a tight override and caps advertised `maxTokens`)
 * `DS4_KV_DISK_SPACE_MB` — KV disk budget (RAM-tiered default when unset)
 * `DS4_DIR_STEERING_FILE` / `_FFN` / `_ATTN` / `_POLICY` — steering controls
 * `DS4_RUNTIME_DIR` — use an existing ds4 checkout; do not clobber its binaries
